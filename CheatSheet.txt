@@ -1,0 +1,76 @@
+* What is Ansible and why we use it? 
+	+ Agentless IT automation tool that replaces scripts with YAML Playbooks. 
+	+ Saves time when dealing with many servers. 
+
+* Example use case? 
+	+ I want to reboot many servers (web, DB) in some particular order. 
+
+* How does it work? 
+	+ No need to install agent on servers that will be managed. 
+	+ Linux: SSH. 
+	+ Windows: PowerShell Remoting. 
+
+* What is a Playbook? 
+	+ 
+
+* How do we set it up? 
+	+ 
+
+* What is a Module? 
+	+ 
+
+* How do we cofigure its default behaviour, location of Inventory and Log files? 
+	+ In /etc/ansible/ansible.cfg: *4
+	[defaults] 
+	inventory 		= /etc/ansible/hosts 
+	log_path  		= /var/log/ansible.log 
+
+* How to configure Ansible for multiple fleets of servers like web, DB? 
+	+ Replicate and edit ansible.cfg to /opt/ansible_playbooks/web, db; to override defaults. *2 
+
+* Override all defaults and all /opt/ansible_playbooks temporarily? 
+	+ Create special tmp-ansible.cfg under /root. 
+	+ $ export ANSIBLE_CONFIG=/root/tmp-ansible.cfg ansible-playbook playbook.yml # *1 
+
+* Override a single param without copying & editing a config file? 
+	+ Set env var ANSIBLE_ + name of param uppercase: $ export ANSIBLE_GATHERING=explicit 
+	+ Verify with: $ ansible-config list 
+
+* Take a look at the current config? 
+	+ $ ansible-config dump 
+
+* What is "Control Machine"? 
+	+ 
+
+* What is Inventory? 
+	+ Information about target systems. 
+	+ Default: /etc/ansible/hosts 
+	+ Example (ini format): 
+		[web]
+		server1.company.com
+		server2.company.com
+		[db]					// Group. 
+		db ansible_host=server3.company.com		// Alias. 
+
+* Edit inventory file to add "db" server (define group databases) @ server4.company.com which is a Windows host (admin/pA$$wd): 
+	+ 	[databases]
+		db ansible_host=server4.company.com ansible_connection=winrm ansible_user=admin ansible_password=pA$$wd 
+* Now define a super group "all" that contains groups databases, webservers, appservers: 
+	+ 	[all:children] 
+		databases 
+		webservers 
+		appservers 
+
+
+
+* How do we make it more secure? 
+	+ Instead of hardcoding the root password in the inventory with ansible_ssh_pass, we set up passwordless SSH with public/private key pairs. 
+	+ Ansible Vault. 
+
+
+
+
+
+
+
+// ~/.ansible.cfg *3 
