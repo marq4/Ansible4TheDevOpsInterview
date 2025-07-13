@@ -10,14 +10,30 @@
 	+ Linux: SSH. 
 	+ Windows: PowerShell Remoting. 
 
-* What is a Playbook? 
-	+ 
-
 * How do we set it up? 
 	+ 
 
+* What is a Playbook? 
+	+ Orchestration language where we define what we want it to do: tasks. 
+	+ Play -> tasks -> task: action to be performed in host. 
+	+ 	
+		- name: play name
+	 	  hosts: localhost 
+		  tasks: 
+			- 
+			- 
+	+ Hosts are defined in inventory. 
+	+ Run it: $ ansible-playbook playbook.yml 		// $ ansible-playbook --help 
+	+ Verify it: 
+		- $ ansible-lint 
+		- Syntax validate: --syntac-check 
+		- Check (dry) Mode: --check 			// Task skipped if not supported by module. 
+		- Diff Mode: --diff 				// Check mode required too. 
+
 * What is a Module? 
-	+ 
+	+ Actions run by tasks. 
+	+ Examples: command, script, yum, service. 
+	+ $ ansible-doc -l 
 
 * How do we cofigure its default behaviour, location of Inventory and Log files? 
 	+ In /etc/ansible/ansible.cfg: *4
@@ -66,6 +82,54 @@
 * How do we make it more secure? 
 	+ Instead of hardcoding the root password in the inventory with ansible_ssh_pass, we set up passwordless SSH with public/private key pairs. 
 	+ Ansible Vault. 
+
+
+* Write a simple Playbook to only display info from the hosts (gather facts): 
++ 	---
+	- name: Gather facts. 
+	  hosts: all 
+	  taks: 
+	  - debug: 
+		var: ansible_facts 
+
+* Write and execute play to install vim, sqlite, jq on nodes defined in "inventory" file:
++ inventory:
+	...
+	[all:vars]
+	app_list=['vim', 'sqlite', 'jq']
+	...
++ 	--- 
+	- hosts: all
+	  become: yes
+	  tasks: 
+		- name: Install apps. 
+		   yum: 
+			name: "{{ item }}" 
+			state: present 
+		   with_items: 
+			- "{{ app_list }}"
++ $ ansible-playbook -i inventory app_install.yml 
+
+* Edit inventory to add these user details: (admin, secret_pass, admin@example.com), and use it in Playbook to 
+	create user on managed servers: 
+	+ inventory:
+	...
+	[all:vars]
+	user_details={'username': 'admin', 'password': 'secret_pass', 'email': 'admin@example.com'}
+	...
+	+
+	---
+	- hosts: all 
+	  become: yes
+	  tasks: 
+		- name: Set up admin user. 
+		  user:
+			name: "{{ user_details.username }}"
+			password: "{{ user_details.password }}"
+			comment: "{{ user_details.email }}"
+			state: present 
+
+
 
 
 
