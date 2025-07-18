@@ -30,11 +30,6 @@
 		- Check (dry) Mode: --check 			// Task skipped if not supported by module. 
 		- Diff Mode: --diff 				// Check mode required too. 
 
-* What is a Module? 
-	+ Actions run by tasks. 
-	+ Examples: command, script, yum, service. 
-	+ $ ansible-doc -l 
-
 * How do we cofigure its default behaviour, location of Inventory and Log files? 
 	+ In /etc/ansible/ansible.cfg: *4
 	[defaults] 
@@ -76,6 +71,80 @@
 		databases 
 		webservers 
 		appservers 
+
+* What is a Module? 
+	+ Actions run by tasks. 
+	+ Examples: command, script, yum, service. 
+	+ $ ansible-doc -l 
+
+* Use modules: 
+	+ Execute a Linux command: 			command: date chdir=/etc/ 
+	+ Transfer & execute script: 			script: /local/path/script.sh -arg1 -arg2 
+	+ Start, stop, restart Linux service: 		service: name=postgres state=started 
+	+ Search for a line in a file, replace or add it: 	
+						lineinfile: 
+							path: /etc/resolv.conf 
+							line: 'nameserver 10.1.250.10' 
+	+ Create file of not exists: 			file: 
+							path: '/var/www/html/index.html' 
+							state: touch 
+							mode: '0644' 
+	+ Add new user (Linux): 			user: 
+							name: 'bob' 
+							uid: 1040 
+							group: QA 
+
+
+
+
+
+
+* As we know, to install packages in Linux we use different managers; in Debian: apt. Red Hat: yum. 
+What can we do about that? We want a single Playbook that works on both. 
+	+ We add a conditional to the tasks: 
+		- name: 'Install NGINX on Debian.' 
+		  apt: 
+		  	name: nginx 
+		  	state: present 
+		  when: ansible_os_family == "Debian" 
+		- name: 'Install NGINX on Red Hat.' 
+		   yum: 
+			name: nginx 
+			state: present 
+		  when: ansible_os_family == "RedHat" 
+
+
+* Check if Apache is down and if so, send email to admin: 
+	+ - name: 'Check if Apache is down.' 
+	      hosts: localhost 
+	      tasks: 
+		- command: service httpd status 
+		  register: result 
+		- mail: 
+			to: admin@company.com 
+			subject: 'Service Altert' 
+			body: 'Apache down!' 
+			when: result.stdout.find('down') != -1 
+
+* Install a bunch of packages using a loop:
++ 
+	---
+	- name: 'Install packages.' 
+	  hosts: localhost 
+	  become: yes 
+	  vars: 
+		packages: 
+			- httpd 
+			- make 
+			- vim 
+	  tasks: 
+		- yum: 
+			name: '{{ item }}'
+			state: present
+		  with_items: '{{ packages }}'  
+
+
+
 
 
 
@@ -129,6 +198,83 @@
 			comment: "{{ user_details.email }}"
 			state: present 
 
+
+* If I use Ansible to update my App code, across many servers, will I ALSO need to remember to restart the service? 
+	+ No. That's what Handlers are for. 
+	- name: 'Deploy App AND also restart service.' 
+	  hosts: app_servers
+	  taks: 
+		- name: 'Copy app code.' 
+		  copy: 
+			src: app_code/ 
+			dest: /opt/app/
+		  notify: 'Restart App service' 		// Must match. 
+	  handlers: 
+		- name: 'Restart App service' 		// Must match. 
+		  service: 
+			name: application_service 
+			state: restarted 
+
+* Suppose we notify the same handler from each of 4 tasks. How many times will the handler run?	
+	+ Just once at the end of the playbook execution. 
+
+* Do I REALLY need to write the steps (tasks) to turn a blank server into a web, DB, backup... 
+	+ No. Use a preconfigured ROLE. 
+	+ Go to Ansible Galaxy and find the relevant role: $ ansible-galaxy search mysql 
+	+ $ ansible-galaxy install user.mysql 
+	+ Use it in playbook: 
+		- name: "Mysql role." 
+		  hosts: db 
+		  roles: 
+			- role: user.mysql 
+			  become: yes 
+			  vars: 
+				mysql_user_name: admin 
+	+ Confirm: $ ansible-galaxy list 
+
+* How do I create my OWN role? 
+	+ Go to my-app directory and create "roles" folder. 
+	+ Run this command under there to generate the skeleton directory structure: $ ansible-galaxy init custom 
+	// This will create dirs: tasks, handlers, vars, defaults. 
+	+ Use it in your playbook: 
+		- name "Install & config custom app." 
+		  hosts: app 
+		  roles: 
+			- custom 
+	// Default loation: /etc/ansible/roles 			// roles_path 
+
+
+* You are tasked with managing network infra from different vendors. 
+What Ansible functionality provides vedor-specific modules, roles, & playbooks. 
+	+ Collections. 
+	+ Examples: 
+		- network.cisco. 
+		- network.juniper. 
+		- network.arista. 
+	+ Install: $ ansible-galaxy collection install network.cisco 				// Q: how do you install a collection in Ansible? 
+
+* Use the appropriate collection to write a playbook that creates an S3 bucket: 
+	+ $ ansible-galaxy collection install amazon.aws 
+	+	--- 
+		- hosts: localhost 
+		  collections: 
+			- amazon.aws 
+		  tasks: 
+			- name: 'Create S3 bucket.' 
+			  aws_s3_bucket: 
+				name: awsome-bucket-ansible-galaxy-collection-amazon-aws-215688 
+				region: us-east-1 
+
+* Now deploy an EC2 instance: 
+	+ $ ansible-galaxy collection install amazon.aws 
+	+ 	--- 
+		- hosts: localhost 
+		  collections: [amazon.aws] 
+		  tasks: 
+			- name: 'Launch EC2 instance.' 
+			  ec2_instance: 
+				name: created-by-ansible 
+				region: us-east-1 
 
 
 
