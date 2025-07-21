@@ -10,8 +10,16 @@
 	+ Linux: SSH. 
 	+ Windows: PowerShell Remoting. 
 
-* How do we set it up? 
-	+ 
+* How do we set it up in a Linux laptop? 
+	+ $ sudo apt install ansible 
+
+* Explain why you don't have a local Ansible in your Windows laptop: 
+	+ It's not trivial. 
+	+ The recommended way to manage remote servers is through WSL, but testing with localhost is challenging as there is no sudo. 
+	+ The Python-pip install fails with: "filename too long" and updating the registry does not always work. 
+
+* Verify connectivity to remote server: 
+	+ $ ansible targetserver -i inventory -m ping -v 
 
 * What is a Playbook? 
 	+ Orchestration language where we define what we want it to do: tasks. 
@@ -37,7 +45,7 @@
 	log_path  		= /var/log/ansible.log 
 
 * How to configure Ansible for multiple fleets of servers like web, DB? 
-	+ Replicate and edit ansible.cfg to /opt/ansible_playbooks/web, db; to override defaults. *2 
+	+ Replicate and edit default ansible.cfg to /opt/ansible_playbooks/web, db; to override defaults. *2 
 
 * Override all defaults and all /opt/ansible_playbooks temporarily? 
 	+ Create special tmp-ansible.cfg under /root. 
@@ -51,7 +59,7 @@
 	+ $ ansible-config dump 
 
 * What is "Control Machine"? 
-	+ 
+	+ My laptop where Ansible CLI is installed. 
 
 * What is Inventory? 
 	+ Information about target systems. 
@@ -146,13 +154,6 @@ What can we do about that? We want a single Playbook that works on both.
 
 
 
-
-
-* How do we make it more secure? 
-	+ Instead of hardcoding the root password in the inventory with ansible_ssh_pass, we set up passwordless SSH with public/private key pairs. 
-	+ Ansible Vault. 
-
-
 * Write a simple Playbook to only display info from the hosts (gather facts): 
 + 	---
 	- name: Gather facts. 
@@ -235,7 +236,7 @@ What can we do about that? We want a single Playbook that works on both.
 * How do I create my OWN role? 
 	+ Go to my-app directory and create "roles" folder. 
 	+ Run this command under there to generate the skeleton directory structure: $ ansible-galaxy init custom 
-	// This will create dirs: tasks, handlers, vars, defaults. 
+	// This will create dirs: tasks, handlers, vars, defaults, templates. 
 	+ Use it in your playbook: 
 		- name "Install & config custom app." 
 		  hosts: app 
@@ -277,10 +278,49 @@ What Ansible functionality provides vedor-specific modules, roles, & playbooks.
 				region: us-east-1 
 
 
+* To test a LB we want index.html to say the name of the web-server it's on (as defined on the control machine). 
+	+ Use Jinja 2 templating and the template module: 
+	+ playbook.yml:
+		--- 
+		- hosts: web 
+		  tasks: 
+			- name: "Copy main page to remote web-servers." 
+			  template: 
+				src: index.html.j2 
+				dest: /var/www/nginx-default/index.html 
+	+ index.html.j2: 
+		...
+		<h1>This is {{ inventory_hostname }} server.</h1> <!-- TMP -->
+		...
 
 
 
 
+* We want to create an Excel report of our servers: OS version, MEM, cores. 
+Suppose they're already defined in "inventory" file under "web" group. 
+	+ templates/inventory.csv.j2: 
+		hostname, arch, distro, version, Mem MB, cores, processors 
+		{% for host in groups['web'] %}
+		{{ host }}, {{ hostvars[host]['ansible_architecture'] }}, {{ hostvars[host]['ansible_distribution'] }}, {{ hostvars[host]['ansible_distribution_version'] }}, {{ hostvars[host]['ansible_memtotal_mb'] }}, {{ hostvars[host]['ansible_processor_cores'] }} {{ hostvars[host]['ansible_processor_count'] }} 
+		{% endfor %} 
+	+ generate_report.yml: 
+		--- 
+		- hosts: all 
+		  tasks: 
+			- setup: 
+		- hosts: localhost 
+		  tasks: 
+			- template: 
+				src: templates/inventory.csv.j2 
+				dest: "C:/inventory.csv" 
+			  run_once: yes 
+	+ $ ansible-playbook -i inventory generate_report.yml 
+
+
+
+* How do we make it more secure? 
+	+ Instead of hardcoding the root password in the inventory with ansible_ssh_pass, we set up passwordless SSH with public/private key pairs. 
+	+ Ansible Vault. 
 
 
 // ~/.ansible.cfg *3 

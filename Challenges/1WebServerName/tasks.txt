@@ -1,0 +1,7 @@
+Tasks:
+1.- Install Ansible locally (Linux). 
+2.- Get the version of Ansible CLI. 
+3.- Write a playbook that copies a minimal html jinja2 template that displays the name of the 
+	"server" as defined in the inventory, it's IP, and it's actual hostname. 
+4.- Run for localhost. 
+5.- Open final html and verify values (and on web browser if local web server running). 

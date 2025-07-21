@@ -1,0 +1,11 @@
+---
+- name: 'DevOps interview challenge.'
+  hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+    - name: 'Copy main page to "remote servers".'
+      template:
+        src: 'templates/index.html.j2'
+        dest: '/var/www/ansible/index.html'
+

@@ -1,0 +1,6 @@
+Solution:
+1.- $ sudo apt install ansible 
+2.- $ ansible --version 
+3.- playbook.yml, templates/index.html.j2
+4.- $ ansible-playbook playbook.yml 
+5.- $ cat /var/www/ansible/index.html
